@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opsfusion"
+version = "0.1.0"
+description = "A synthetic multi-agent cloud incident investigation simulator"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+runtime = [
+    "boto3>=1.40",
+    "fastapi>=0.115",
+    "mangum>=0.19",
+    "PyJWT[crypto]>=2.15",
+    "PyYAML>=6.0",
+    "uvicorn>=0.30",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["contracts*", "simulator*", "evidence*", "agents*", "workflow*", "gateway*", "knowledge*", "memory*", "evaluation*", "apps*"]

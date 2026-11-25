@@ -1,0 +1,6 @@
+boto3>=1.40
+fastapi>=0.115
+mangum>=0.19
+PyJWT[crypto]>=2.15
+PyYAML>=6.0
+uvicorn>=0.30

@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: OpsFusion telemetry and evaluation log resources.
+
+Parameters:
+  EnvironmentName: {Type: String}
+  DeploymentContractVersion: {Type: String}
+  ReleaseId: {Type: String, Default: local}
+
+Resources:
+  EvaluationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/opsfusion/${EnvironmentName}/evaluation
+      RetentionInDays: 14
+  InvestigationDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub opsfusion-${EnvironmentName}
+      DashboardBody: !Sub |
+        {"widgets":[{"type":"text","x":0,"y":0,"width":24,"height":4,"properties":{"markdown":"# OpsFusion ${EnvironmentName}\nRead-only synthetic incident analysis, agent activity, evidence, and evaluation."}}]}
+
+Outputs:
+  EnvironmentName: {Value: !Ref EnvironmentName}
+  DeploymentContractVersion: {Value: !Ref DeploymentContractVersion}
+  EvaluationLogGroupName: {Value: !Ref EvaluationLogGroup}
+  DashboardName:
+    Value: !Sub 'opsfusion-${EnvironmentName}'

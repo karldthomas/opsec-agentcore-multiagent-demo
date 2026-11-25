@@ -1,0 +1,49 @@
+version: 1
+name: opsfusion
+stack_name_pattern: "{name}-{environment}-{id}"
+
+stacks:
+  - id: 00-foundation
+    template: stacks/00-foundation.yaml
+    depends_on: []
+  - id: 01-state
+    template: stacks/01-state.yaml
+    depends_on: [00-foundation]
+  - id: 02-simulator
+    template: stacks/02-simulator.yaml
+    depends_on: [01-state]
+  - id: 03-knowledge
+    template: stacks/03-knowledge.yaml
+    depends_on: [01-state]
+  - id: 04-agentcore
+    template: stacks/04-agentcore.yaml
+    depends_on: [00-foundation, 02-simulator, 03-knowledge]
+  - id: 05-workflow
+    template: stacks/05-workflow.yaml
+    depends_on: [01-state, 04-agentcore]
+  - id: 06-application
+    template: stacks/06-application.yaml
+    depends_on: [01-state, 04-agentcore, 05-workflow]
+  - id: 07-web
+    template: stacks/07-web.yaml
+    depends_on: [06-application]
+  - id: 08-observability-evaluation
+    template: stacks/08-observability-evaluation.yaml
+    depends_on: [01-state, 04-agentcore, 05-workflow, 06-application]
+
+steps:
+  - id: run-tests
+    handler: run_tests
+    before: [00-foundation]
+  - id: validate-contracts
+    handler: validate_templates
+    before: [00-foundation]
+  - id: check-aws-identity
+    handler: check_aws_identity
+    before: [00-foundation]
+  - id: build-web
+    handler: build_web
+    before: [07-web]
+  - id: reconcile-registry
+    handler: reconcile_registry
+    after: [04-agentcore]

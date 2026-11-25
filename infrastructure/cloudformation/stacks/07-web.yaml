@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: OpsFusion versioned web artifact bucket.
+
+Parameters:
+  EnvironmentName: {Type: String}
+  DeploymentContractVersion: {Type: String}
+  ReleaseId: {Type: String, Default: local}
+
+Resources:
+  WebArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+      VersioningConfiguration: {Status: Enabled}
+
+Outputs:
+  EnvironmentName: {Value: !Ref EnvironmentName}
+  DeploymentContractVersion: {Value: !Ref DeploymentContractVersion}
+  WebArtifactBucketName: {Value: !Ref WebArtifactBucket}
+  WebArtifactUri:
+    Value: !Sub 's3://${WebArtifactBucket}/'

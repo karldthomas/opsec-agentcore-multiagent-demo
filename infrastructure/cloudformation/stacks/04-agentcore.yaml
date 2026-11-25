@@ -1,0 +1,400 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: OpsFusion AgentCore runtime, read-only Gateway, Harness, Memory, and policy resources.
+
+Parameters:
+  EnvironmentName: {Type: String}
+  DeploymentContractVersion: {Type: String}
+  ReleaseId: {Type: String, Default: local}
+  GatewayExecutionRoleArn: {Type: String}
+  HarnessExecutionRoleArn: {Type: String}
+  GatewayTargetFunctionArn: {Type: String}
+  PolicyEngineArn:
+    Type: String
+    Default: ''
+  ModelId:
+    Type: String
+    Default: us.amazon.nova-2-lite-v1:0
+
+Conditions:
+  HasPolicyEngineArn: !Not [!Equals [!Ref PolicyEngineArn, '']]
+
+Resources:
+  OpsFusionPolicyEngine:
+    Type: AWS::BedrockAgentCore::PolicyEngine
+    DeletionPolicy: Retain
+    Properties:
+      Name: !Sub opsfusion_${EnvironmentName}_policy
+      Description: OpsFusion read-only synthetic tool authorization engine.
+      Tags:
+        - Key: Application
+          Value: OpsFusion
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  OpsFusionReadOnlyPolicy:
+    Type: AWS::BedrockAgentCore::Policy
+    DeletionPolicy: Retain
+    Properties:
+      PolicyEngineId: !GetAtt OpsFusionPolicyEngine.PolicyEngineId
+      Name: opsfusion_read_only_tools
+      Description: Permit only bounded read-only OpsFusion simulator tools; managed by CloudFormation.
+      ValidationMode: FAIL_ON_ANY_FINDINGS
+      EnforcementMode: ACTIVE
+      Definition:
+        Cedar:
+          Statement: !Sub
+            - |
+              permit(
+                principal,
+                action in [
+                  AgentCore::Action::"opsfusion-simulator-tools___get_incident_context",
+                  AgentCore::Action::"opsfusion-simulator-tools___get_shared_evidence",
+                  AgentCore::Action::"opsfusion-simulator-tools___query_cloudwatch_metrics",
+                  AgentCore::Action::"opsfusion-simulator-tools___search_application_logs",
+                  AgentCore::Action::"opsfusion-simulator-tools___get_service_traces",
+                  AgentCore::Action::"opsfusion-simulator-tools___get_active_alarms",
+                  AgentCore::Action::"opsfusion-simulator-tools___compare_metric_windows",
+                  AgentCore::Action::"opsfusion-simulator-tools___get_service_health",
+                  AgentCore::Action::"opsfusion-simulator-tools___list_recent_deployments",
+                  AgentCore::Action::"opsfusion-simulator-tools___get_deployment_details",
+                  AgentCore::Action::"opsfusion-simulator-tools___compare_deployment_versions",
+                  AgentCore::Action::"opsfusion-simulator-tools___get_configuration_changes",
+                  AgentCore::Action::"opsfusion-simulator-tools___search_runbooks",
+                  AgentCore::Action::"opsfusion-simulator-tools___get_database_metrics",
+                  AgentCore::Action::"opsfusion-simulator-tools___get_queue_metrics",
+                  AgentCore::Action::"opsfusion-simulator-tools___query_order_records",
+                  AgentCore::Action::"opsfusion-simulator-tools___get_order_processing_history",
+                  AgentCore::Action::"opsfusion-simulator-tools___calculate_customer_impact"
+                ],
+                resource == AgentCore::Gateway::"${GatewayArn}"
+              );
+            - GatewayArn: !GetAtt OpsFusionGateway.GatewayArn
+
+  OpsFusionGateway:
+    Type: AWS::BedrockAgentCore::Gateway
+    DeletionPolicy: Retain
+    Properties:
+      Name: !Sub opsfusion-${EnvironmentName}-gateway
+      Description: OpsFusion bounded synthetic operational tools.
+      RoleArn: !Ref GatewayExecutionRoleArn
+      ProtocolType: MCP
+      AuthorizerType: AWS_IAM
+      PolicyEngineConfiguration: !If
+        - HasPolicyEngineArn
+        - Arn: !Ref PolicyEngineArn
+          Mode: ENFORCE
+        - !Ref AWS::NoValue
+      Tags:
+        Application: OpsFusion
+        Environment: !Ref EnvironmentName
+
+  OpsFusionGatewayTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    DeletionPolicy: Retain
+    Properties:
+      GatewayIdentifier: !Ref OpsFusionGateway
+      Name: opsfusion-simulator-tools
+      Description: OpsFusion synthetic simulator Gateway target; managed by CloudFormation.
+      ProtocolType: MCP
+      TargetConfiguration:
+        Mcp:
+          Lambda:
+            LambdaArn: !Ref GatewayTargetFunctionArn
+            ToolSchema:
+              InlinePayload:
+                - Name: get_incident_context
+                  Description: Get the current incident anchor and service context.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: get_shared_evidence
+                  Description: Retrieve the current run-scoped evidence workspace.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: query_cloudwatch_metrics
+                  Description: Query bounded synthetic metric observations.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                      service: {Type: string, Description: 'Service name (usually orders-service).'}
+                      metric: {Type: string, Description: Metric name such as api_error_rate or database_connections.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: search_application_logs
+                  Description: Search bounded application log observations.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                      query: {Type: string, Description: Optional bounded text query such as timeout or retry.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: get_service_traces
+                  Description: Retrieve request trace observations derived from simulator records.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: get_active_alarms
+                  Description: Retrieve active synthetic alarms.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: compare_metric_windows
+                  Description: Compare baseline and incident metric windows.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                      metric: {Type: string, Description: Metric to compare between baseline and incident windows.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: get_service_health
+                  Description: Get current service health and incident values.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: list_recent_deployments
+                  Description: List recent deployment records.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: get_deployment_details
+                  Description: Get one deployment record.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                      deployment_id: {Type: string, Description: Exact deployment ID returned by list_recent_deployments.}
+                    Required: [run_id, tenant_id, actor_id, role, deployment_id]
+                - Name: compare_deployment_versions
+                  Description: Compare observable deployment versions.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: get_configuration_changes
+                  Description: Get observable configuration differences.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: search_runbooks
+                  Description: Search synthetic troubleshooting guidance.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                      query: {Type: string, Description: Search terms for current troubleshooting guidance.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: get_database_metrics
+                  Description: Get database capacity and latency observations.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: get_queue_metrics
+                  Description: Get queue depth and age observations.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: query_order_records
+                  Description: Query bounded synthetic order records.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                      status: {Type: string, Description: Optional order status filter.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: get_order_processing_history
+                  Description: Get order progress observations.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+                - Name: calculate_customer_impact
+                  Description: Calculate synthetic customer impact.
+                  InputSchema:
+                    Type: object
+                    Description: Run-scoped OpsFusion tool request.
+                    Properties:
+                      run_id: {Type: string, Description: Current synthetic scenario run ID.}
+                      tenant_id: {Type: string, Description: Authorized synthetic tenant ID.}
+                      actor_id: {Type: string, Description: Operator or agent actor ID for this investigation.}
+                      role: {Type: string, Description: Exact read-only role key.}
+                    Required: [run_id, tenant_id, actor_id, role]
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+
+  OpsFusionMemory:
+    Type: AWS::BedrockAgentCore::Memory
+    DeletionPolicy: Retain
+    Properties:
+      Name: !Sub opsfusion_${EnvironmentName}_memory
+      Description: Verified OpsFusion investigation summaries; historical context only.
+      EventExpiryDuration: 30
+      MemoryStrategies:
+        - SummaryMemoryStrategy:
+            Name: opsfusion_summary
+      Tags:
+        Application: OpsFusion
+        Environment: !Ref EnvironmentName
+
+  OpsFusionHarness:
+    Type: AWS::BedrockAgentCore::Harness
+    DeletionPolicy: Retain
+    Properties:
+      HarnessName: !Sub opsfusion_${EnvironmentName}_harness
+      ExecutionRoleArn: !Ref HarnessExecutionRoleArn
+      Model:
+        BedrockModelConfig:
+          ModelId: !Ref ModelId
+          ApiFormat: converse_stream
+      SystemPrompt:
+        - Text: >-
+            You are an OpsFusion specialist operating only on synthetic evidence in a
+            read-only analysis run. Cite evidence IDs, distinguish facts from hypotheses,
+            and never mutate simulator state. Work through the bounded tools deliberately:
+            state the business question, call the smallest useful tool, summarize what it
+            found, and decide whether another observation is needed before handing off.
+      Tools:
+        - Type: agentcore_gateway
+          Name: opsfusion-simulator
+          Config:
+            AgentCoreGateway:
+              GatewayArn: !GetAtt OpsFusionGateway.GatewayArn
+              OutboundAuth:
+                AwsIam: {}
+      AllowedTools: ['@opsfusion-simulator']
+      Memory:
+        AgentCoreMemoryConfiguration:
+          Arn: !GetAtt OpsFusionMemory.MemoryArn
+      MaxIterations: 16
+      MaxTokens: 4096
+      TimeoutSeconds: 180
+      Tags:
+        - Key: Application
+          Value: OpsFusion
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  AgentCoreConfiguration:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /opsfusion/${EnvironmentName}/agentcore/config
+      Type: String
+      Value: !Sub
+        - '{"environment":"${EnvironmentName}","releaseId":"${ReleaseId}","provisioning":"cloudformation","gatewayArn":"${GatewayArn}","harnessArn":"${HarnessArn}","memoryArn":"${MemoryArn}","policyEngineArn":"${PolicyEngineArn}"}'
+        - GatewayArn: !GetAtt OpsFusionGateway.GatewayArn
+          HarnessArn: !GetAtt OpsFusionHarness.Arn
+          MemoryArn: !GetAtt OpsFusionMemory.MemoryArn
+          PolicyEngineArn: !GetAtt OpsFusionPolicyEngine.PolicyEngineArn
+      Description: CloudFormation-managed AgentCore Gateway, Harness, Memory, and read-only policy configuration.
+
+  AgentCoreLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/opsfusion/${EnvironmentName}/agentcore
+      RetentionInDays: 14
+
+Outputs:
+  EnvironmentName: {Value: !Ref EnvironmentName}
+  DeploymentContractVersion: {Value: !Ref DeploymentContractVersion}
+  AgentCoreConfigurationParameter: {Value: !Ref AgentCoreConfiguration}
+  AgentCoreLogGroupName: {Value: !Ref AgentCoreLogGroup}
+  GatewayId: {Value: !Ref OpsFusionGateway}
+  GatewayArn: {Value: !GetAtt OpsFusionGateway.GatewayArn}
+  GatewayTargetId: {Value: !GetAtt OpsFusionGatewayTarget.TargetId}
+  HarnessId: {Value: !GetAtt OpsFusionHarness.HarnessId}
+  HarnessArn: {Value: !GetAtt OpsFusionHarness.Arn}
+  MemoryId: {Value: !GetAtt OpsFusionMemory.MemoryId}
+  MemoryArn: {Value: !GetAtt OpsFusionMemory.MemoryArn}
+  HarnessMemoryArn: {Value: !GetAtt OpsFusionMemory.MemoryArn}
+  PolicyEngineId: {Value: !GetAtt OpsFusionPolicyEngine.PolicyEngineId}
+  PolicyEngineArn: {Value: !GetAtt OpsFusionPolicyEngine.PolicyEngineArn}
+  PolicyId: {Value: !GetAtt OpsFusionReadOnlyPolicy.PolicyId}
+  GatewayPolicyMode: {Value: ENFORCE}

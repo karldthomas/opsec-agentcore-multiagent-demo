@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#091018" />
+    <title>OpsFusion · Incident investigation control room</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="auth-shell" class="auth-shell"></div>
+
+    <div id="console-shell" class="hidden">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true"><span>OF</span><i></i></div>
+        <div>
+          <p class="eyebrow">OPSFUSION / SYNTHETIC OPERATIONS</p>
+          <h1>Incident investigation control room</h1>
+          <p class="muted">See what the team is checking now, why it matters, and what the evidence shows.</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span id="connection-status" class="status-pill neutral"><span class="status-dot"></span> STANDBY</span>
+        <span class="mode-chip">NO PRODUCTION ACCESS</span>
+        <span class="mode-chip accent-chip">NO TURNING BACK · us-east-1</span>
+        <span id="principal-chip" class="user-chip hidden"></span>
+        <button id="sign-out" type="button" class="secondary hidden">Sign out</button>
+      </div>
+    </header>
+
+    <main class="content-shell">
+      <section class="panel scenario-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">START A LIVE TRACE</p>
+            <h2>Choose a synthetic incident</h2>
+          </div>
+          <div id="run-status-summary" class="run-status-summary">No run selected</div>
+        </div>
+        <div class="controls">
+          <label>Scenario
+            <select id="scenario">
+              <option value="INC-2048">INC-2048 · deployment regression</option>
+              <option value="INC-2051">INC-2051 · retry storm</option>
+              <option value="INC-2054">INC-2054 · query regression</option>
+              <option value="INC-2057">INC-2057 · dependency outage</option>
+            </select>
+          </label>
+          <label class="wide-field">Investigation objective
+            <input id="objective" value="Identify the root cause and customer impact using evidence-grounded analysis." />
+          </label>
+          <button id="launch" type="button">Start live investigation</button>
+        </div>
+        <div id="scenario-description" class="scenario-description" role="note" aria-live="polite"></div>
+        <p id="notice" class="notice" role="status"></p>
+      </section>
+
+      <section id="empty" class="panel empty-state">
+        <div class="empty-copy">
+          <p class="eyebrow">HOW TO READ THE CONSOLE</p>
+          <h2>The workflow is the outer loop. Harness is the inner loop.</h2>
+          <p class="lead">Step Functions advances durable stages and checkpoints. Inside an agent stage, AgentCore Harness lets the model decide which authorized read-only tool to call, reads the observation, and chooses whether another turn is needed.</p>
+          <div class="proof-row">
+            <span>Durable checkpoints</span>
+            <span>Parallel specialists</span>
+            <span>Gateway policy enforcement</span>
+            <span>Read-only analysis</span>
+          </div>
+        </div>
+        <div class="concept-mini-diagram" aria-label="Conceptual OpsFusion execution flow">
+          <div class="mini-node outer"><b>01</b><span>Step Functions</span><small>stage, retry, resume</small></div>
+          <div class="mini-arrow">→</div>
+          <div class="mini-node inner"><b>02</b><span>Harness loop</span><small>model ↔ tool</small></div>
+          <div class="mini-arrow">→</div>
+          <div class="mini-node data"><b>03</b><span>Simulator</span><small>observations only</small></div>
+          <div class="mini-return">observed evidence returns to the next model turn</div>
+        </div>
+      </section>
+
+      <section id="workspace" class="workspace hidden">
+        <div id="run-banner"></div>
+        <div id="view" class="view-root"></div>
+      </section>
+    </main>
+
+    <footer class="footer-note">
+      <span>OpsFusion explains observable execution records; it never exposes private model chain-of-thought.</span>
+      <a href="/tutorial.html">Read the concepts and implementation tutorial</a>
+    </footer>
+    </div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: OpsFusion durable workflow state, evidence, and fixture storage.
+
+Parameters:
+  EnvironmentName: {Type: String}
+  DeploymentContractVersion: {Type: String}
+  ReleaseId: {Type: String, Default: local}
+
+Resources:
+  WorkflowStateTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub opsfusion-${EnvironmentName}-workflow
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: run_id, AttributeType: S}
+        - {AttributeName: record_key, AttributeType: S}
+      KeySchema:
+        - {AttributeName: run_id, KeyType: HASH}
+        - {AttributeName: record_key, KeyType: RANGE}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      SSESpecification: {SSEEnabled: true}
+
+  EvidenceTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub opsfusion-${EnvironmentName}-evidence
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: run_id, AttributeType: S}
+        - {AttributeName: evidence_key, AttributeType: S}
+      KeySchema:
+        - {AttributeName: run_id, KeyType: HASH}
+        - {AttributeName: evidence_key, KeyType: RANGE}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      SSESpecification: {SSEEnabled: true}
+
+  FixtureBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+      VersioningConfiguration: {Status: Enabled}
+
+Outputs:
+  EnvironmentName: {Value: !Ref EnvironmentName}
+  DeploymentContractVersion: {Value: !Ref DeploymentContractVersion}
+  WorkflowStateTableName: {Value: !Ref WorkflowStateTable}
+  WorkflowStateTableArn: {Value: !GetAtt WorkflowStateTable.Arn}
+  EvidenceTableName: {Value: !Ref EvidenceTable}
+  EvidenceTableArn: {Value: !GetAtt EvidenceTable.Arn}
+  FixtureBucketName: {Value: !Ref FixtureBucket}

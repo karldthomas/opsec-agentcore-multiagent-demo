@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+
+# Test and coverage output
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Node and web build output
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+apps/web/dist/
+
+# AWS/SAM and generated deployment context
+.aws-sam/
+infrastructure/cloudformation/build/*
+!infrastructure/cloudformation/build/.gitkeep
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.local
+
+# OS and editor files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+*.swp
+*.swo
+.idea/
+.vscode/

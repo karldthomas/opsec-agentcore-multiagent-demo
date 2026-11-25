@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: OpsFusion Step Functions durable workflow and checkpoint worker.
+
+Parameters:
+  EnvironmentName: {Type: String}
+  DeploymentContractVersion: {Type: String}
+  ReleaseId: {Type: String, Default: local}
+
+Resources:
+  WorkflowWorker:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub opsfusion-${EnvironmentName}-workflow-worker
+      CodeUri: ../../..
+      Handler: workflow.worker.handler
+      Runtime: python3.12
+      Timeout: 60
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBReadPolicy:
+            TableName: !Sub 'opsfusion-${EnvironmentName}-workflow'
+        - DynamoDBWritePolicy:
+            TableName: !Sub 'opsfusion-${EnvironmentName}-workflow'
+      Environment:
+        Variables:
+          OPSFUSION_WORKFLOW_TABLE: !Sub 'opsfusion-${EnvironmentName}-workflow'
+
+  WorkflowStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub opsfusion-${EnvironmentName}-investigation
+      Definition:
+        StartAt: InitializeRun
+        States:
+          InitializeRun:
+            Type: Task
+            Resource: !GetAtt WorkflowWorker.Arn
+            Parameters: {stage: initialize, "input.$": "$"}
+            Retry: [{ErrorEquals: [States.ALL], IntervalSeconds: 2, MaxAttempts: 3, BackoffRate: 2.0}]
+            Next: ParallelInvestigation
+          ParallelInvestigation:
+            Type: Task
+            Resource: !GetAtt WorkflowWorker.Arn
+            Parameters: {stage: parallel_investigation, "input.$": "$"}
+            Retry: [{ErrorEquals: [States.ALL], IntervalSeconds: 3, MaxAttempts: 3, BackoffRate: 2.0}]
+            Next: ReconcileEvidence
+          ReconcileEvidence:
+            Type: Task
+            Resource: !GetAtt WorkflowWorker.Arn
+            Parameters: {stage: reconcile_evidence, "input.$": "$"}
+            Next: CompleteAnalysis
+          CompleteAnalysis:
+            Type: Task
+            Resource: !GetAtt WorkflowWorker.Arn
+            Parameters: {stage: completed, "input.$": "$"}
+            End: true
+      Policies:
+        - LambdaInvokePolicy: {FunctionName: !Ref WorkflowWorker}
+
+Outputs:
+  EnvironmentName: {Value: !Ref EnvironmentName}
+  DeploymentContractVersion: {Value: !Ref DeploymentContractVersion}
+  WorkflowWorkerArn: {Value: !GetAtt WorkflowWorker.Arn}
+  WorkflowStateMachineArn: {Value: !Ref WorkflowStateMachine}

@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: OpsFusion synthetic simulator and Gateway Lambda target.
+
+Parameters:
+  EnvironmentName: {Type: String}
+  DeploymentContractVersion: {Type: String}
+  ReleaseId: {Type: String, Default: local}
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures: [arm64]
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+      Variables:
+        OPSFUSION_ENVIRONMENT: !Ref EnvironmentName
+        OPSFUSION_STATE_TABLE: !Sub opsfusion-${EnvironmentName}-workflow
+        OPSFUSION_EVIDENCE_TABLE: !Sub opsfusion-${EnvironmentName}-evidence
+        OPSFUSION_USE_DYNAMODB: 'true'
+
+Resources:
+  SimulatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub opsfusion-${EnvironmentName}-simulator
+      CodeUri: ../../..
+      Handler: simulator.api.handler
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors: {AllowOrigins: ['*'], AllowMethods: [GET, POST], AllowHeaders: ['content-type']}
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBReadPolicy:
+            TableName: !Sub 'opsfusion-${EnvironmentName}-workflow'
+        - DynamoDBWritePolicy:
+            TableName: !Sub 'opsfusion-${EnvironmentName}-workflow'
+        - DynamoDBReadPolicy:
+            TableName: !Sub 'opsfusion-${EnvironmentName}-evidence'
+
+  GatewayTargetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub opsfusion-${EnvironmentName}-gateway-target
+      CodeUri: ../../..
+      Handler: gateway.lambda_handler.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBReadPolicy:
+            TableName: !Sub 'opsfusion-${EnvironmentName}-workflow'
+
+  GatewayTargetInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref GatewayTargetFunction
+      Principal: bedrock-agentcore.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+
+Outputs:
+  EnvironmentName: {Value: !Ref EnvironmentName}
+  DeploymentContractVersion: {Value: !Ref DeploymentContractVersion}
+  SimulatorFunctionArn: {Value: !GetAtt SimulatorFunction.Arn}
+  SimulatorFunctionUrl: {Value: !GetAtt SimulatorFunctionUrl.FunctionUrl}
+  GatewayTargetFunctionArn: {Value: !GetAtt GatewayTargetFunction.Arn}

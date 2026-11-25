@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: OpsFusion synthetic runbook artifacts and S3 Vectors configuration boundary.
+
+Parameters:
+  EnvironmentName: {Type: String}
+  DeploymentContractVersion: {Type: String}
+  ReleaseId: {Type: String, Default: local}
+
+Resources:
+  RunbookBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+      VersioningConfiguration: {Status: Enabled}
+  KnowledgeConfiguration:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /opsfusion/${EnvironmentName}/knowledge/runbook-prefix
+      Type: String
+      Value: !Sub 's3://${RunbookBucket}/runbooks/v1/'
+      Description: Runbook source prefix; vector index is created by the explicit post-deployment provisioner.
+
+Outputs:
+  EnvironmentName: {Value: !Ref EnvironmentName}
+  DeploymentContractVersion: {Value: !Ref DeploymentContractVersion}
+  RunbookBucketName: {Value: !Ref RunbookBucket}
+  RunbookPrefix:
+    Value: !Sub 's3://${RunbookBucket}/runbooks/v1/'
