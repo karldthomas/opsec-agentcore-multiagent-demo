@@ -1,10 +1,5 @@
 # OpsFusion
 
-This case study and its implementation were created with substantial
-assistance from AI. AI generated much of the code and helped develop the
-accompanying materials, while I directed the architecture, made the design
-decisions, and reviewed the results. This project is intended as a tutorial.
-
 OpsFusion is a synthetic cloud-incident investigation console built with
 Amazon Bedrock AgentCore. It shows four role-scoped agents investigating one
 incident through bounded read-only tools, preserving evidence, and producing a
@@ -25,6 +20,13 @@ data only through the read-only AgentCore Gateway.
 The console makes the investigation visible: agent roles, configured skills,
 tool calls, bounded inputs, observations, evidence IDs, findings, and the
 independent evaluation are all available for review.
+
+## AI Assistance
+
+This case study and its implementation were created with substantial
+assistance from AI. AI generated much of the code and helped develop the
+accompanying materials, while I directed the architecture, made the design
+decisions, and reviewed the results. This project is intended as a tutorial.
 
 ## Features
 
