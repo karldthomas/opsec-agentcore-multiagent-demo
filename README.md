@@ -118,15 +118,15 @@ hidden-state separation, and zero state changes.
 
 ## AgentCore services
 
-| Service or feature | How OpsFusion uses it |
-| --- | --- |
-| AgentCore Harness | Runs the model reasoning, tool selection, iteration, streaming, and stopping loop for each role. |
-| AgentCore Gateway | Exposes the synthetic operational tools through an MCP boundary with IAM authorization. |
-| Gateway target | Routes tool requests to the read-only Lambda adapter and typed ToolCatalog. |
-| AgentCore Policy | Enforces the Gateway's 18 read-only actions in `ENFORCE` mode with a Gateway-scoped Cedar policy. |
-| AgentCore Memory | Provides summary-oriented Harness context; it is not an authority source. |
-| Registry | Catalogs capabilities and role records for discovery and governance; it is separate from runtime authorization. |
-| AgentCore Runtime | Not provisioned as a separate application runtime; the managed Harness service owns the agent execution boundary. |
+| Service or feature | How OpsFusion uses it                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| AgentCore Harness  | Runs the model reasoning, tool selection, iteration, streaming, and stopping loop for each role.                  |
+| AgentCore Gateway  | Exposes the synthetic operational tools through an MCP boundary with IAM authorization.                           |
+| Gateway target     | Routes tool requests to the read-only Lambda adapter and typed ToolCatalog.                                       |
+| AgentCore Policy   | Enforces the Gateway's 18 read-only actions in `ENFORCE` mode with a Gateway-scoped Cedar policy.                 |
+| AgentCore Memory   | Provides summary-oriented Harness context; it is not an authority source.                                         |
+| Registry           | Catalogs capabilities and role records for discovery and governance; it is separate from runtime authorization.   |
+| AgentCore Runtime  | Not provisioned as a separate application runtime; the managed Harness service owns the agent execution boundary. |
 
 ## Documentation
 
@@ -141,12 +141,3 @@ hidden-state separation, and zero state changes.
   operator demonstration script.
 - [`CASE_STUDY.md`](CASE_STUDY.md) — business scenario and requirements.
 - [`PLAN.md`](PLAN.md) — implementation plan and design context.
-
-## Project boundary
-
-This is a proof of concept for learning and evaluation. Agent-facing tools
-return observations and evidence references, not hidden ground truth or
-conclusions. The application and evaluator own authoritative state, evidence
-provenance, checkpoints, and completion. Do not connect it to production
-customer or infrastructure data without a separate security and operations
-review.
