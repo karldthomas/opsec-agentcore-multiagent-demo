@@ -50,7 +50,23 @@ answer.
 
 ![Synthetic incident selection and scenario brief](images/scenario-selection.png)
 
-### 3. Follow the live investigation loop
+### 3. See the incident snapshot and participating agents
+
+The overview brings the business symptoms and the collaborating agents
+together. The operator can see the current service condition, select an agent,
+and inspect the role responsible for each part of the investigation.
+
+![Incident health and participating agents](images/incident-health-and-agents.png)
+
+### 4. Inspect an agent's skill and tool boundary
+
+Selecting an agent exposes the configured skill, Harness session, run activity,
+authority boundary, and tools called in that run. This makes the agent's work
+auditable without exposing private chain-of-thought.
+
+![Agent skill, tools, and authority details](images/agent-skill-tools-authority.png)
+
+### 5. Follow the live investigation loop
 
 The live trace shows the current business question, the customer impact being
 measured, and the analysis boundary. Each agent can repeat its own question →
@@ -59,7 +75,23 @@ Nothing changes in the simulator during this phase.
 
 ![Live read-only investigation trace](images/live-investigation-trace.png)
 
-### 4. Review the analysis evaluation
+### 6. Inspect tool calls and evidence
+
+The tool-call view shows the actual Gateway tool, status, timestamp, and
+evidence ID. This is where an operator can connect an agent's business question
+to the observation that informed its finding.
+
+![Tool calls, observations, and evidence IDs](images/tool-call-observations.png)
+
+### 7. Read the completed analysis
+
+When the read-only investigation has enough evidence, the case activity view
+shows the structured result, cited evidence, and analysis-complete status. The
+simulator remains unchanged.
+
+![Completed evidence-grounded analysis](images/analysis-complete-activity.png)
+
+### 8. Review the analysis evaluation
 
 The evaluation view reports whether the analysis is evidence-grounded and
 still read-only. It checks evidence citations, hidden-state separation, root
@@ -67,8 +99,6 @@ cause coverage, and the absence of state changes before the run is considered
 complete.
 
 ![Read-only analysis evaluation](images/analysis-evaluation.png)
-
-The standalone screenshot index is available in [`picts.md`](picts.md).
 
 ## Multi-agent architecture
 
