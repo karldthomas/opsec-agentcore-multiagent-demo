@@ -26,6 +26,50 @@ state-changing actions are not runtime capabilities.
 - **The operator sees the work**: agent role, configured skill, tool calls,
   bounded inputs, observations, evidence IDs, and structured findings.
 
+## Web walkthrough
+
+The web console is an operator-facing view of the read-only investigation. It
+starts with authenticated access, lets an operator choose a synthetic
+scenario, shows the live agent investigation as it gathers evidence, and
+finishes with an independent analysis evaluation.
+
+### 1. Sign in as an operator
+
+The console uses invite-only Cognito authentication. The sign-in screen makes
+the operating boundary explicit: this is a protected operator surface for the
+synthetic OpsFusion environment.
+
+![OpsFusion operator sign-in](images/operator-sign-in.png)
+
+### 2. Choose the incident and investigation objective
+
+The operator selects a synthetic incident and starts the investigation. The
+scenario brief summarizes the customer-facing symptoms before any agent work
+begins, while the objective defines the business question the agents must
+answer.
+
+![Synthetic incident selection and scenario brief](images/scenario-selection.png)
+
+### 3. Follow the live investigation loop
+
+The live trace shows the current business question, the customer impact being
+measured, and the analysis boundary. Each agent can repeat its own question →
+tool call → finding → next-question loop until the evidence is sufficient.
+Nothing changes in the simulator during this phase.
+
+![Live read-only investigation trace](images/live-investigation-trace.png)
+
+### 4. Review the analysis evaluation
+
+The evaluation view reports whether the analysis is evidence-grounded and
+still read-only. It checks evidence citations, hidden-state separation, root
+cause coverage, and the absence of state changes before the run is considered
+complete.
+
+![Read-only analysis evaluation](images/analysis-evaluation.png)
+
+The standalone screenshot index is available in [`picts.md`](picts.md).
+
 ## Multi-agent architecture
 
 Each role receives its own AgentCore Harness invocation and session. The
