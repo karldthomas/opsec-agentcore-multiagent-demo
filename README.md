@@ -61,11 +61,7 @@ export AWS_REGION=us-east-1
 Use `--plan` for a non-mutating preflight. Do not commit credentials,
 generated deployment context, or environment-specific CloudFormation outputs.
 
-## Screenshots and walkthrough
-
-The screenshots show the operator path from authentication to evidence-backed
-analysis. For a written five-minute demonstration, see
-[`docs/FIVE_MINUTE_WALKTHROUGH.md`](docs/FIVE_MINUTE_WALKTHROUGH.md).
+## Walkthrough
 
 ### 1. Sign in
 
